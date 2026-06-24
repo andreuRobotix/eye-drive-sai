@@ -1,0 +1,8 @@
+# Webcam vision (GazeTracking is vendored in gaze/gaze_tracking, NOT installed via pip)
+opencv-python>=4.10
+numpy>=2.0
+# precompiled dlib (wheels) -> do NOT use plain "dlib" on Windows (it requires compiling with Visual Studio)
+dlib-bin
+
+# SAI robot control over Bluetooth (pulls in bleak as a dependency)
+legoeducation

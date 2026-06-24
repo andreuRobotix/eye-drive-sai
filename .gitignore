@@ -1,0 +1,26 @@
+# dlib face model (~95 MB): downloaded by download_model.py, NOT stored in git
+*.dat
+*.dat.bz2
+*.part
+
+# personal trained eye model (each player trains their own)
+eye_model.json
+
+# private mentor notes (not for participants)
+HOW_IT_WORKS.md
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
