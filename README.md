@@ -54,10 +54,10 @@ You write **three pieces** of code; everything else (camera, eye-tracking, game 
 | **2. Prediction** | the **`if`** that says left / center / right | `gaze/trainer.py` | `predict()` |
 | **3. Driving** | move the robot for each direction | `play.py` | `decide()` |
 
-The webcam gives one **gaze number** between `0.0` and `1.0`:
+The webcam gives one **gaze number** between `0.0` and `1.0` (same orientation as the calibration bar in the app — LEFT on the left):
 
-    0.0 ─────────── 0.5 ─────────── 1.0
-   looking RIGHT  looking CENTER  looking LEFT
+    1.0 ─────────── 0.5 ─────────── 0.0
+   looking LEFT   looking CENTER  looking RIGHT
 
 ---
 
@@ -143,20 +143,31 @@ Look where the screen tells you — **left, center, right** (green = recording, 
 
 **File: `play.py`.**
 
-Move the robot with the **tank** command — each value is a wheel's speed, from `-100` to `100`. There's also a stop:
+Move the robot with the **tank** command — each value is a wheel's speed, from `-100` to `100`. And there's a stop:
 
     motor.movement_move_tank(LEFT_WHEEL, RIGHT_WHEEL)
     motor.stop()
 
-How movement works:
+The trick: to go **straight**, both wheels spin at the **same** speed; to **turn**, make **one wheel slower** than the other; to **stop**, call `motor.stop()`.
 
-- **Forward:** both wheels at the **same** speed → `motor.movement_move_tank(SPEED, SPEED)`.
-- **Turn:** make one wheel **slower** than the other. To turn **left**, slow the left (inner) wheel → `motor.movement_move_tank(TURN_INNER, SPEED)`. Turning **right** is the mirror image — work out which wheel to slow.
-- **Stop:** `motor.stop()` — use this when there's no face, for safety.
+`decide()` receives `state` — one of `"center"`, `"left"`, `"right"` or `"none"` (no face). We've solved the **left** case for you as an example; fill in the other three (`SPEED` and `TURN_INNER` are set at the top of `play.py`):
 
-(`SPEED` and `TURN_INNER` are set at the top of `play.py` — lower them for tighter control.)
+```python
+def decide(motor, state):
+    if state == "left":
+        motor.movement_move_tank(TURN_INNER, SPEED)   # turn left: slow the LEFT (inner) wheel
+    elif state == "center":
+        # TODO: go forward -> both wheels at the SAME speed
+        ...
+    elif state == "right":
+        # TODO: turn right -> the mirror image of "left"
+        ...
+    else:      # "none" (no face)
+        # TODO: stop the robot, for safety
+        ...
+```
 
-Now write `decide()` yourself. It receives `state` — one of `"center"`, `"left"`, `"right"` or `"none"` (no face) — and has to choose the right movement for each one. Use an `if` / `elif` / `else` over `state`. (Braking is automatic: blinking a lot stops the robot for you, so that case never reaches `decide()`.)
+(Braking is automatic: blinking a lot stops the robot for you, so that case never reaches `decide()`.)
 
 When `decide()` is done, set your **`CARD_SERIAL`** at the top of `play.py`, connect the robot, and drive for real:
 

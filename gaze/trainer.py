@@ -9,6 +9,7 @@ Run `python train_eyes.py` to train; play.py then uses the model automatically.
 """
 
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -22,7 +23,13 @@ from .model import ensure_model
 DEFAULT_MODEL_PATH = str(Path(__file__).resolve().parents[1] / "eye_model.json")
 
 DEADZONE = 0.5        # how far (0..1) toward a side you must look to trigger it; bigger = less sensitive
-COLLECT_SECONDS = 3.0  # seconds of samples per direction
+COLLECT_SECONDS = 3.0       # seconds of samples per direction (the actual recording)
+COUNTDOWN_SECONDS = 10.0    # "LOOK <direction>" countdown shown before each recording
+INTRO_SECONDS = 3.0         # short intro before the first direction
+
+# Capture/window size -- big enough that the on-screen instructions are never cut off.
+CAPTURE_WIDTH = 1280
+CAPTURE_HEIGHT = 720
 
 # full-screen tints so you can tell the phase at a glance (out of the corner of your eye)
 GREEN = (0, 200, 0)    # GREEN  = recording this direction
@@ -119,6 +126,22 @@ def accuracy(model, samples_by_label):
     return correct / total if total else 0.0
 
 
+def _fit_centered_text(frame, text, y, color, target_scale, thickness, max_width_frac=0.92):
+    """Draw `text` horizontally centered at height `y`, shrinking the font if it
+    would be too wide so the message is ALWAYS fully visible (never cut off).
+    Returns the drawn text height in pixels."""
+    font = cv2.FONT_HERSHEY_DUPLEX
+    scale = target_scale
+    (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
+    max_w = int(frame.shape[1] * max_width_frac)
+    if tw > max_w:                       # too wide for the frame -> scale it down to fit
+        scale *= max_w / tw
+        (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
+    x = max(0, (frame.shape[1] - tw) // 2)
+    cv2.putText(frame, text, (x, y), font, scale, color, thickness, cv2.LINE_AA)
+    return th
+
+
 def _phase(video, gaze, window, big, small, seconds, tint, collect=False):
     """Show a message for `seconds` with a full-frame color tint; optionally
     record gaze samples. tint = GREEN (recording) or GRAY (waiting)."""
@@ -137,9 +160,13 @@ def _phase(video, gaze, window, big, small, seconds, tint, collect=False):
         overlay[:] = tint
         frame = cv2.addWeighted(overlay, _TINT_ALPHA, frame, 1 - _TINT_ALPHA, 0)
         rem = max(0.0, end - time.time())
-        cv2.putText(frame, big, (30, 70), cv2.FONT_HERSHEY_DUPLEX, 1.6, (255, 255, 255), 3)
-        cv2.putText(frame, small.format(rem=rem, n=len(samples)), (30, 120),
-                    cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2)
+        h = frame.shape[0]
+        # big instruction (e.g. "LOOK LEFT"), centered and auto-fitted so it never gets cut
+        big_h = _fit_centered_text(frame, big, int(h * 0.46), (255, 255, 255), 2.6, 5)
+        # small status / countdown line, centered just below the instruction
+        small_text = small.format(rem=rem, n=len(samples), secs=math.ceil(rem))
+        _fit_centered_text(frame, small_text, int(h * 0.46) + big_h + 55,
+                           (255, 255, 255), 1.3, 2)
         cv2.imshow(window, frame)
         if (cv2.waitKey(1) & 0xFF) in (ord('q'), 27):
             break
@@ -154,17 +181,27 @@ def run_calibration(camera_index=0, seconds=COLLECT_SECONDS, model_path=DEFAULT_
     video = cv2.VideoCapture(camera_index, _CAMERA_BACKEND)
     if not video.isOpened():
         raise RuntimeError(f"Could not open the camera (index={camera_index}). Try 1 or 2.")
-    video.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    # capture and show big so the on-screen instructions are never cut off
+    video.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_WIDTH)
+    video.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
     window = "Train your eyes (q = cancel)"
+    cv2.namedWindow(window, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window, CAPTURE_WIDTH, CAPTURE_HEIGHT)
     labels = ("left", "center", "right")  # calibration order
+    prompts = {"left": "LOOK LEFT", "center": "LOOK AT THE CENTER", "right": "LOOK RIGHT"}
     data = {}
     try:
-        _phase(video, gaze, window, "Get ready...", "starting in {rem:0.0f}s", 2.0, GRAY)
-        for idx, label in enumerate(labels, 1):
-            _phase(video, gaze, window, f"[{idx}/3] Get ready: look {label.upper()}",
-                   "{rem:0.1f}s", 1.5, GRAY)
-            data[label] = _phase(video, gaze, window, f"[{idx}/3] LOOK {label.upper()}",
-                                 "GREEN = recording   {rem:0.1f}s   samples={n}", seconds, GREEN, collect=True)
+        _phase(video, gaze, window, "EYE CALIBRATION", "starting in {secs}s", INTRO_SECONDS, GRAY)
+        for label in labels:
+            prompt = prompts[label]
+            # 10-second countdown: tell them WHERE to look, and to HOLD it through the green phase
+            _phase(video, gaze, window, prompt,
+                   "look here when it turns GREEN, then hold until it disappears  ({secs}s)",
+                   COUNTDOWN_SECONDS, GRAY)
+            # record while they keep looking that way (green = recording)
+            data[label] = _phase(video, gaze, window, prompt,
+                                 "recording... KEEP LOOKING here  ({secs}s)",
+                                 seconds, GREEN, collect=True)
     finally:
         video.release()
         cv2.destroyAllWindows()
