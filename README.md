@@ -60,33 +60,41 @@ The webcam gives one **gaze number** between `0.0` and `1.0`:
 
 **File: `gaze/trainer.py`.**
 
-When you calibrate, the program records you looking each way and groups the gaze numbers into three lists (one number per camera frame):
+**Goal:** teach the program what *your* eyes look like when you look left, center and right.
 
-    samples_by_label["left"]     # numbers recorded while you looked LEFT
-    samples_by_label["center"]   # ... CENTER
-    samples_by_label["right"]    # ... RIGHT
+**What you're given (already done).** When you calibrate, the camera films you looking each way for a few seconds. Every frame gives one **gaze number** (`0.0` = far right … `1.0` = far left). All those numbers are collected into three lists, e.g.:
 
-Your job: turn each list into **one** number, its **arithmetic mean** — add the numbers up and divide by how many there are (`sum(list) / len(list)`). Fill in the `_mean` helper:
+    samples_by_label["left"]   = [0.71, 0.69, 0.70, 0.72, 0.70, ...]   # while you looked LEFT
+    samples_by_label["center"] = [0.50, 0.49, 0.51, 0.50, ...]         # ... CENTER
+    samples_by_label["right"]  = [0.31, 0.30, 0.29, 0.30, ...]         # ... RIGHT
+
+**What you write.** Each list has many numbers, but you want **one** number that represents each direction — its **average** (arithmetic mean): add the numbers up and divide by how many there are.
+
+    average of [0.71, 0.69, 0.70, 0.72, 0.70]  =  3.52 / 5  =  0.704
+
+You put that one line inside the `_mean` helper (it takes a list and returns its mean):
 
 ```python
 def _mean(values):
-    if not values:                 # nothing recorded -> leave it empty
+    if not values:                     # empty list (eyes weren't seen) -> nothing to average
         return None
-    return sum(values) / len(values)   # <-- the average: add them up, divide by how many
+    return sum(values) / len(values)   # <-- YOU WRITE THIS: sum the list, divide by its length
 ```
 
-That's the whole "training". `train()` already calls `_mean` on your three lists to build the model:
+`sum(values)` adds the list up, `len(values)` is how many numbers it has, and dividing them gives the average.
+
+**That trio is your model.** `train()` is already written: it calls your `_mean` once per direction and keeps the three averages. Those three numbers together *are* your personal eye model:
 
 ```python
 def train(samples_by_label, deadzone=DEADZONE):
-    left   = _mean(samples_by_label["left"])
-    center = _mean(samples_by_label["center"])
-    right  = _mean(samples_by_label["right"])
+    left   = _mean(samples_by_label["left"])     # e.g. 0.70
+    center = _mean(samples_by_label["center"])   # e.g. 0.50
+    right  = _mean(samples_by_label["right"])    # e.g. 0.30
     ...
     return EyeModel(left, center, right, deadzone)
 ```
 
-Look right ≈ `0.30`, center ≈ `0.50`, left ≈ `0.70` → your model is `(0.70, 0.50, 0.30)`.
+With the lists above, your model is `(left=0.70, center=0.50, right=0.30)`. Step 2 uses those three numbers to decide where a new gaze is pointing.
 
 ---
 
