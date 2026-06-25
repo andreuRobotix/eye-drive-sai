@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """FakeDoubleMotor: a pretend robot that PRINTS what it would do, with no Bluetooth.
 
 Use it to test the whole game with MOCK = True without the SAI in front of you.

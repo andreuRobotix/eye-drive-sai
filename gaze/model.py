@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """Download of the dlib face model (shape_predictor_68_face_landmarks.dat).
 
 The model is ~95 MB and is NOT stored in git. It is downloaded the first time

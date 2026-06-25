@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """Eye Trainer: a tiny machine-learning model that learns to read YOUR eyes.
 
 Idea (same family as the Day-1 perceptron): you give it labeled examples by

@@ -1,5 +1,6 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """
-PLAY: drive the SAI robot with your EYES through the obstacle course.
+PLAY: drive the robot with your EYES through the obstacle course.
 
 How to play:
   - Look CENTER to go forward.
@@ -9,7 +10,7 @@ How to play:
   - Your mission: steer around the obstacles and finish the circuit.
 
 Steps:
-  1) Set your CARD_SERIAL (the number printed on your SAI card).
+  1) Set your CARD_SERIAL (the number printed on your robot's connection card).
   2) Keep MOCK = True to test WITHOUT a robot (it prints what it would do).
   3) Fill in the decide() block following the hints (the TODO lines).
   4) When it works in MOCK, set MOCK = False and drive for real.
@@ -22,7 +23,7 @@ from robot import get_motor
 from robot.game import run_game
 
 # ===================== CONFIGURE THIS =====================
-CARD_SERIAL = "3664"   # the serial of YOUR SAI card (the number on it) -- CHANGE IT
+CARD_SERIAL = "3664"   # the serial of YOUR robot's connection card (the number on it) -- CHANGE IT
 MOCK = False           # True = no robot (prints);  False = real robot
 # =========================================================
 

@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """Eyes: a simple wrapper around GazeTracking to drive a robot with your gaze.
 
 Usage:

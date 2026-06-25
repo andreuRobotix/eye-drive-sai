@@ -53,7 +53,7 @@ You write **three pieces** of code; everything else (camera, eye-tracking, game 
 
 | Step | What you write | File | Function |
 |------|----------------|------|----------|
-| **1. Calibration** | the **average** of each direction's samples | `gaze/trainer.py` | `_mean` (used by `train()`) |
+| **1. Calibration** | the **average** of each direction's samples | `gaze/trainer.py` | `train()` |
 | **2. Prediction** | the **`if`** that says left / center / right | `gaze/trainer.py` | `predict()` |
 | **3. Driving** | move the robot for each direction | `play.py` | `decide()` |
 
@@ -124,7 +124,7 @@ Quick check: with those thresholds, `0.66` should come out **left**, `0.35` **ri
 
     python train_eyes.py
 
-Look where the screen tells you — **left, center, right** (green = recording, ~15 s). It uses your `train()` and `predict()`, prints the accuracy, and saves your model to `eye_model.json`; the game loads it automatically. Re-run it if the room's lighting changes.
+Look where the screen tells you — it walks you through looking at the **top-left**, the **webcam (top-center)**, and the **top-right** of your screen, one at a time (green = recording; the whole thing takes about a minute). It uses your `train()` and `predict()`, prints the accuracy, and saves your model to `eye_model.json`; the game loads it automatically. Re-run it if the room's lighting changes.
 
 > **Tip:** while the game runs, drag the handles on the **calibration bar** at the bottom of the camera window to make turns trigger more or less easily (saved instantly; press **r** to reset).
 
@@ -179,3 +179,7 @@ When `decide()` is done, connect the robot and drive for real:
 - **Camera doesn't open:** in `gaze/eyes.py`, change `CAMERA_INDEX` from `0` to `1` (or `2`).
 - **Robot won't connect:** check Bluetooth is on, the robot is on and nearby, and not already connected elsewhere (e.g. a browser tab). To find your card number, run `python solutions/tests/find_serial.py`.
 - **Directions feel swapped:** flip the values in your `decide()`, or ask a mentor.
+
+---
+
+_This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties._

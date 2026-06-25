@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """Download the face model (dlib) needed to detect the gaze.
 
 You normally do NOT need to run this: Eyes() downloads it the first time.

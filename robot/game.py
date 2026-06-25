@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """run_game: the main game loop.
 
 You do NOT need to edit this. Your logic goes in the decide() function in play.py.

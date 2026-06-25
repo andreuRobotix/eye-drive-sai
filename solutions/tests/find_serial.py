@@ -1,3 +1,4 @@
+# This is a proprietary development of ROBOTIX Hands-on Learning, protected and not to be sold or transferred to third parties.
 """
 Find the CARD SERIAL of nearby SAI / LEGO Education devices.
 

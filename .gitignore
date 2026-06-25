@@ -6,9 +6,6 @@
 # personal trained eye model (each player trains their own)
 eye_model.json
 
-# private mentor notes (not for participants)
-HOW_IT_WORKS.md
-
 # Virtual environment
 .venv/
 venv/
