@@ -9,6 +9,7 @@ from lelib import singleMotor, doubleMotor, colorSensor, controller
 import time
 import legoeducation as le
 import legoeducation.basic_device as _basic_device
+import legoeducation.rpc_message as _rpc_message
 
 
 # ── Firmware version-check bypass ─────────────────────────────────────────────
@@ -30,6 +31,33 @@ class _AnyVersion:
 
 
 _basic_device.RPC_VERSION = _AnyVersion()
+
+
+# ── Quiet, robust notification parsing ────────────────────────────────────────
+# Our SAI's firmware (1, 0, 67) streams a MOTOR status notification whose byte
+# layout differs from the one this `legoeducation` build (1, 0, 73) expects, so
+# the library's parser raises `struct.error` on every motor packet. The library
+# catches it, but logs a FULL traceback for each one -- dozens per second while
+# driving. That flood of console writes is what freezes the camera preview and
+# makes the robot lag / "hang". We don't read motor feedback, so we wrap the
+# parser to return nothing on an unparseable packet instead of raising. Valid
+# notifications (info/card during connect & scan) still parse normally, and
+# motor-command acknowledgements use a separate path, so control is unaffected.
+# (Remove this block to restore strict parsing.)
+_orig_notification_parser = _rpc_message.device_notification_parser
+
+
+def _safe_notification_parser(*args, **kwargs):
+    try:
+        return _orig_notification_parser(*args, **kwargs)
+    except Exception:
+        return []
+
+
+_rpc_message.device_notification_parser = _safe_notification_parser
+_basic_device._raw_device_notification_parser = _safe_notification_parser
+if hasattr(le, "device_notification_parser"):
+    le.device_notification_parser = _safe_notification_parser
 
 
 class singleMotor(le.SingleMotor):

@@ -22,7 +22,7 @@ from robot import get_motor
 from robot.game import run_game
 
 # ===================== CONFIGURE THIS =====================
-CARD_SERIAL = "1131"   # the serial of YOUR SAI card (the number on it) -- CHANGE IT
+CARD_SERIAL = "3664"   # the serial of YOUR SAI card (the number on it) -- CHANGE IT
 MOCK = False           # True = no robot (prints);  False = real robot
 # =========================================================
 
