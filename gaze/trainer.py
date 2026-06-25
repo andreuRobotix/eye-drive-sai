@@ -126,26 +126,36 @@ def accuracy(model, samples_by_label):
     return correct / total if total else 0.0
 
 
-def _fit_centered_text(frame, text, y, color, target_scale, thickness, max_width_frac=0.92):
-    """Draw `text` horizontally centered at height `y`, shrinking the font if it
-    would be too wide so the message is ALWAYS fully visible (never cut off).
-    Returns the drawn text height in pixels."""
+def _fit_text(frame, text, y, color, target_scale, thickness, anchor="center"):
+    """Draw `text` at height `y`, horizontally aligned by `anchor`
+    ("left" / "center" / "right"), shrinking the font if needed so it always
+    fits inside the frame margins (never cut off). Returns the text height."""
     font = cv2.FONT_HERSHEY_DUPLEX
+    w = frame.shape[1]
+    margin = int(w * 0.04)
     scale = target_scale
     (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
-    max_w = int(frame.shape[1] * max_width_frac)
-    if tw > max_w:                       # too wide for the frame -> scale it down to fit
+    max_w = w - 2 * margin
+    if tw > max_w:                       # too wide -> scale it down to fit the margins
         scale *= max_w / tw
         (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
-    x = max(0, (frame.shape[1] - tw) // 2)
-    cv2.putText(frame, text, (x, y), font, scale, color, thickness, cv2.LINE_AA)
+    if anchor == "left":
+        x = margin
+    elif anchor == "right":
+        x = w - margin - tw
+    else:
+        x = (w - tw) // 2
+    cv2.putText(frame, text, (max(0, x), y), font, scale, color, thickness, cv2.LINE_AA)
     return th
 
 
-def _phase(video, gaze, window, big, small, seconds, tint, collect=False):
+def _phase(video, gaze, window, big, small_lines, seconds, tint, collect=False, anchor="center"):
     """Show a message for `seconds` with a full-frame color tint; optionally
-    record gaze samples. tint = GREEN (recording) or GRAY (waiting)."""
+    record gaze samples. `small_lines` is one string or a list of lines; `anchor`
+    places the whole text left / center / right (to point where to look)."""
     samples = []
+    if isinstance(small_lines, str):
+        small_lines = (small_lines,)
     end = time.time() + seconds
     while time.time() < end:
         ok, frame = video.read()
@@ -161,12 +171,14 @@ def _phase(video, gaze, window, big, small, seconds, tint, collect=False):
         frame = cv2.addWeighted(overlay, _TINT_ALPHA, frame, 1 - _TINT_ALPHA, 0)
         rem = max(0.0, end - time.time())
         h = frame.shape[0]
-        # big instruction (e.g. "LOOK LEFT"), centered and auto-fitted so it never gets cut
-        big_h = _fit_centered_text(frame, big, int(h * 0.46), (255, 255, 255), 2.6, 5)
-        # small status / countdown line, centered just below the instruction
-        small_text = small.format(rem=rem, n=len(samples), secs=math.ceil(rem))
-        _fit_centered_text(frame, small_text, int(h * 0.46) + big_h + 55,
-                           (255, 255, 255), 1.3, 2)
+        # side prompts (left/right) sit near the TOP; the centered ones sit mid-screen
+        big_y = int(h * 0.18) if anchor != "center" else int(h * 0.42)
+        big_h = _fit_text(frame, big, big_y, (255, 255, 255), 2.2, 5, anchor)
+        y = big_y + big_h + 42
+        for line in small_lines:
+            text = line.format(rem=rem, n=len(samples), secs=math.ceil(rem))
+            lh = _fit_text(frame, text, y, (255, 255, 255), 1.2, 2, anchor)
+            y += lh + 22
         cv2.imshow(window, frame)
         if (cv2.waitKey(1) & 0xFF) in (ord('q'), 27):
             break
@@ -219,17 +231,18 @@ def run_calibration(camera_index=0, seconds=COLLECT_SECONDS, model_path=DEFAULT_
     data = {}
     try:
         _phase(video, gaze, window, "EYE CALIBRATION",
-               "you'll look at 3 spots on your screen -- starting in {secs}s", INTRO_SECONDS, GRAY)
+               ("you'll look at 3 spots on your screen", "starting in {secs}s"),
+               INTRO_SECONDS, GRAY)
         for label in labels:
             big, where = targets[label]
-            # GRAY countdown: tell them WHERE to look; they start when it turns GREEN
+            # GRAY countdown: the text sits on the side you must look (left/center/right)
             _phase(video, gaze, window, big,
-                   "look at " + where + " when the screen turns GREEN  ({secs}s)",
-                   COUNTDOWN_SECONDS, GRAY)
-            # GREEN recording: name the exact spot and HOLD until the green screen ends, then next
+                   ("look at " + where, "when the screen turns GREEN  ({secs}s)"),
+                   COUNTDOWN_SECONDS, GRAY, anchor=label)
+            # GREEN recording: same spot, HOLD until the green screen ends, then next
             data[label] = _phase(video, gaze, window, big,
-                                 "look at " + where + " -- HOLD until this GREEN ends  ({secs}s)",
-                                 seconds, GREEN, collect=True)
+                                 ("look at " + where, "HOLD until this GREEN ends  ({secs}s)"),
+                                 seconds, GREEN, collect=True, anchor=label)
     finally:
         video.release()
         cv2.destroyAllWindows()
