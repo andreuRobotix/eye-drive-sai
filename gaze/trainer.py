@@ -25,7 +25,7 @@ DEFAULT_MODEL_PATH = str(Path(__file__).resolve().parents[1] / "eye_model.json")
 DEADZONE = 0.5        # how far (0..1) toward a side you must look to trigger it; bigger = less sensitive
 COLLECT_SECONDS = 3.0       # seconds of samples per direction (the actual recording)
 COUNTDOWN_SECONDS = 10.0    # "LOOK <direction>" countdown shown before each recording
-INTRO_SECONDS = 3.0         # short intro before the first direction
+INTRO_SECONDS = 10.0        # intro before the first direction (long enough to read)
 
 # Capture/window size -- big enough that the on-screen instructions are never cut off.
 CAPTURE_WIDTH = 1280
@@ -173,6 +173,20 @@ def _phase(video, gaze, window, big, small, seconds, tint, collect=False):
     return samples
 
 
+def _screen_size(default=(1280, 720)):
+    """Best-effort screen resolution so we can center the window. Falls back to a
+    sane default if it can't be determined (e.g. tkinter unavailable)."""
+    try:
+        import tkinter
+        root = tkinter.Tk()
+        root.withdraw()
+        size = (root.winfo_screenwidth(), root.winfo_screenheight())
+        root.destroy()
+        return size
+    except Exception:
+        return default
+
+
 def run_calibration(camera_index=0, seconds=COLLECT_SECONDS, model_path=DEFAULT_MODEL_PATH):
     """Guided calibration in order LEFT -> CENTER -> RIGHT, then train and save.
     The whole webcam goes GREEN while recording and GRAY while getting ready."""
@@ -181,26 +195,40 @@ def run_calibration(camera_index=0, seconds=COLLECT_SECONDS, model_path=DEFAULT_
     video = cv2.VideoCapture(camera_index, _CAMERA_BACKEND)
     if not video.isOpened():
         raise RuntimeError(f"Could not open the camera (index={camera_index}). Try 1 or 2.")
-    # capture and show big so the on-screen instructions are never cut off
+    # capture big so the on-screen instructions are never cut off
     video.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_WIDTH)
     video.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
     window = "Train your eyes (q = cancel)"
+    # open a BIG window (~95% of the screen) and CENTER it, keeping 16:9 so the
+    # video isn't distorted and nothing is clipped off-edge
+    sw, sh = _screen_size()
+    scale = min(sw * 0.95 / CAPTURE_WIDTH, sh * 0.95 / CAPTURE_HEIGHT)
+    win_w = int(CAPTURE_WIDTH * scale)
+    win_h = int(CAPTURE_HEIGHT * scale)
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(window, CAPTURE_WIDTH, CAPTURE_HEIGHT)
+    cv2.resizeWindow(window, win_w, win_h)
+    cv2.moveWindow(window, max(0, (sw - win_w) // 2), max(0, (sh - win_h) // 2))
     labels = ("left", "center", "right")  # calibration order
-    prompts = {"left": "LOOK LEFT", "center": "LOOK AT THE CENTER", "right": "LOOK RIGHT"}
+    # WHERE to look for each one: the top corners of your screen and the webcam
+    # (top-center). Looking at the screen corners gives clean, well-separated gazes.
+    targets = {
+        "left":   ("LOOK TOP-LEFT",      "the TOP-LEFT corner of your screen"),
+        "center": ("LOOK AT THE WEBCAM", "the WEBCAM (top-center of your screen)"),
+        "right":  ("LOOK TOP-RIGHT",     "the TOP-RIGHT corner of your screen"),
+    }
     data = {}
     try:
-        _phase(video, gaze, window, "EYE CALIBRATION", "starting in {secs}s", INTRO_SECONDS, GRAY)
+        _phase(video, gaze, window, "EYE CALIBRATION",
+               "you'll look at 3 spots on your screen -- starting in {secs}s", INTRO_SECONDS, GRAY)
         for label in labels:
-            prompt = prompts[label]
-            # 10-second countdown: tell them WHERE to look, and to HOLD it through the green phase
-            _phase(video, gaze, window, prompt,
-                   "look here when it turns GREEN, then hold until it disappears  ({secs}s)",
+            big, where = targets[label]
+            # GRAY countdown: tell them WHERE to look; they start when it turns GREEN
+            _phase(video, gaze, window, big,
+                   "look at " + where + " when the screen turns GREEN  ({secs}s)",
                    COUNTDOWN_SECONDS, GRAY)
-            # record while they keep looking that way (green = recording)
-            data[label] = _phase(video, gaze, window, prompt,
-                                 "recording... KEEP LOOKING here  ({secs}s)",
+            # GREEN recording: name the exact spot and HOLD until the green screen ends, then next
+            data[label] = _phase(video, gaze, window, big,
+                                 "look at " + where + " -- HOLD until this GREEN ends  ({secs}s)",
                                  seconds, GREEN, collect=True)
     finally:
         video.release()
