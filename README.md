@@ -169,9 +169,11 @@ def decide(motor, state):
 
 (Braking is automatic: blinking a lot stops the robot for you, so that case never reaches `decide()`.)
 
-When `decide()` is done, set your **`CARD_SERIAL`** at the top of `play.py`, connect the robot, and drive for real:
+When `decide()` is done, connect the robot and drive for real:
 
     python play.py
+
+> ⚠️ **VERY IMPORTANT — set your own card number first.** At the top of `play.py`, change `CARD_SERIAL = "...."` to **your robot's number** (the one printed on its connection card). Every robot has a different number, so if it isn't yours the program won't connect to *your* robot (it may connect to someone else's, or to none). Not sure of your number? Run `python solutions/tests/find_serial.py`.
 
 ---
 

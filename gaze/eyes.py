@@ -18,7 +18,7 @@ import cv2
 
 from .gaze_tracking import GazeTracking
 from .model import ensure_model
-from .trainer import DEFAULT_MODEL_PATH, EyeModel
+from .trainer import DEFAULT_MODEL_PATH, EyeModel, _screen_size
 
 # ===================== CALIBRATION =====================
 # GazeTracking horizontal_ratio: 0.0 = looking RIGHT, 0.5 = center, 1.0 = looking LEFT
@@ -87,7 +87,19 @@ class Eyes:
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
         self.show_preview = show_preview
         if self.show_preview:
-            cv2.namedWindow(PREVIEW_WINDOW, cv2.WINDOW_AUTOSIZE)
+            # Open a BIG window (~95% of the screen) and center it, like the
+            # train_eyes calibration window, so the preview isn't tiny. We keep the
+            # capture small (fast gaze tracking) and just let OpenCV scale the whole
+            # frame up to the window; it also maps mouse clicks back to frame
+            # coordinates, so the draggable calibration bar keeps working.
+            cap_w = self.video.get(cv2.CAP_PROP_FRAME_WIDTH) or FRAME_WIDTH
+            cap_h = self.video.get(cv2.CAP_PROP_FRAME_HEIGHT) or (FRAME_WIDTH * 3 / 4)
+            sw, sh = _screen_size()
+            scale = min(sw * 0.95 / cap_w, sh * 0.95 / cap_h)
+            win_w, win_h = int(cap_w * scale), int(cap_h * scale)
+            cv2.namedWindow(PREVIEW_WINDOW, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(PREVIEW_WINDOW, win_w, win_h)
+            cv2.moveWindow(PREVIEW_WINDOW, max(0, (sw - win_w) // 2), max(0, (sh - win_h) // 2))
             cv2.setMouseCallback(PREVIEW_WINDOW, self._on_mouse)
 
         self._prev_closed = False
