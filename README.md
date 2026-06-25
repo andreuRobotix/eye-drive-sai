@@ -19,7 +19,12 @@ Your mission: get the robot through the obstacle circuit without knocking anythi
 
 ## Get it running (once)
 
-Create and activate a virtual environment.
+Clone the repository and enter the folder:
+
+    git clone https://github.com/andreuRobotix/eye-drive-sai.git
+    cd eye-drive-sai
+
+Then create and activate a virtual environment.
 
 On Windows:
 
@@ -72,16 +77,16 @@ The webcam gives one **gaze number** between `0.0` and `1.0`:
 
     average of [0.71, 0.69, 0.70, 0.72, 0.70]  =  3.52 / 5  =  0.704
 
-You put that one line inside the `_mean` helper (it takes a list and returns its mean):
+Write the `_mean` helper yourself so it takes a list and returns that average:
 
 ```python
 def _mean(values):
-    if not values:                     # empty list (eyes weren't seen) -> nothing to average
-        return None
-    return sum(values) / len(values)   # <-- YOU WRITE THIS: sum the list, divide by its length
+    # TODO 1: if the list is empty (no samples), return None so we don't divide by zero
+    # TODO 2: otherwise, return the average of the numbers in `values`
+    ...
 ```
 
-`sum(values)` adds the list up, `len(values)` is how many numbers it has, and dividing them gives the average.
+Two built-in functions are all you need: `sum(values)` adds up the list, and `len(values)` tells you how many numbers it has. The average is one of them divided by the other.
 
 **That trio is your model.** `train()` is already written: it calls your `_mean` once per direction and keeps the three averages. Those three numbers together *are* your personal eye model:
 
@@ -102,29 +107,27 @@ With the lists above, your model is `(left=0.70, center=0.50, right=0.30)`. Step
 
 **File: `gaze/trainer.py`.**
 
-A new gaze number arrives (`ratio`) and you say which direction it is. The two thresholds are already given to you as `self.t_left` (≈ `0.60`) and `self.t_right` (≈ `0.40`). You only write the two `if` conditions:
+A new gaze number arrives (`ratio`) and you have to say which direction it is. You write the two `if` conditions inside `predict()`. To compare against, you're **given two thresholds**: `self.t_left` (≈ `0.60`) and `self.t_right` (≈ `0.40`) — the lines a gaze has to cross to count as a turn.
+
+Fill in the two blank conditions yourself:
 
 ```python
 def predict(self, ratio):
     if ratio is None:        # the camera can't see your eyes
         return "none"
-    if ______________:       # YOU: when is it "left"?
+    if ______________:       # TODO: when is it "left"?
         return "left"
-    if ______________:       # YOU: when is it "right"?
+    if ______________:       # TODO: when is it "right"?
         return "right"
-    return "center"
+    return "center"          # not far enough either way
 ```
 
-Bigger number = more to the left, smaller = more to the right. So it's **left** at or above the left threshold, **right** at or below the right threshold:
+Hints:
 
-```python
-    if ratio >= self.t_left:
-        return "left"
-    if ratio <= self.t_right:
-        return "right"
-```
+- Remember the scale: **bigger `ratio` = more to the left, smaller = more to the right.**
+- It's **left** when `ratio` has reached the *left* threshold, and **right** when it has reached the *right* threshold — so each condition compares `ratio` against one of the two `self.t_...` values (think `>=` and `<=`).
 
-With that model, `0.66` is left, `0.35` is right, `0.50` is center.
+Quick check: with those thresholds, `0.66` should come out **left**, `0.35` **right**, and `0.50` **center**.
 
 **Now record your eyes** (this runs Steps 1 and 2 on your real data):
 
@@ -140,30 +143,24 @@ Look where the screen tells you — **left, center, right** (green = recording, 
 
 **File: `play.py`.**
 
-Move the robot with the **tank** command — each value is a wheel's speed, from `-100` to `100`:
+Move the robot with the **tank** command — each value is a wheel's speed, from `-100` to `100`. There's also a stop:
 
-    motor.movement_move_tank(LEFT, RIGHT)
+    motor.movement_move_tank(LEFT_WHEEL, RIGHT_WHEEL)
     motor.stop()
 
-`decide()` receives `state` — one of `"center"`, `"left"`, `"right"` or `"none"` (no face). (Braking is automatic: blinking a lot stops the robot for you, so it never reaches here.)
+How movement works:
 
-Set your **`CARD_SERIAL`** at the top of `play.py`, then write `decide()`:
+- **Forward:** both wheels at the **same** speed → `motor.movement_move_tank(SPEED, SPEED)`.
+- **Turn:** make one wheel **slower** than the other. To turn **left**, slow the left (inner) wheel → `motor.movement_move_tank(TURN_INNER, SPEED)`. Turning **right** is the mirror image — work out which wheel to slow.
+- **Stop:** `motor.stop()` — use this when there's no face, for safety.
 
-```python
-def decide(motor, state):
-    if state == "center":
-        motor.movement_move_tank(SPEED, SPEED)        # forward
-    elif state == "left":
-        motor.movement_move_tank(TURN_INNER, SPEED)   # turn left
-    elif state == "right":
-        motor.movement_move_tank(SPEED, TURN_INNER)   # turn right
-    else:      # "none" (no face)
-        motor.stop()
-```
+(`SPEED` and `TURN_INNER` are set at the top of `play.py` — lower them for tighter control.)
 
-`SPEED` and `TURN_INNER` are at the top of `play.py` — lower them for tighter control.
+Now write `decide()` yourself. It receives `state` — one of `"center"`, `"left"`, `"right"` or `"none"` (no face) — and has to choose the right movement for each one. Use an `if` / `elif` / `else` over `state`. (Braking is automatic: blinking a lot stops the robot for you, so that case never reaches `decide()`.)
 
-**Try it without the robot first:** keep `MOCK = True` and run `python play.py`. It prints what the robot *would* do as you move your eyes. When it looks right, set `MOCK = False` and drive for real.
+When `decide()` is done, set your **`CARD_SERIAL`** at the top of `play.py`, connect the robot, and drive for real:
+
+    python play.py
 
 ---
 
