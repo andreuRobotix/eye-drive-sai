@@ -9,6 +9,9 @@ It's a **team activity for two**:
 
 Your mission: get the robot through the obstacle circuit without knocking anything over. Swap roles each run. But first, **you write the code that makes it work** — three small pieces.
 
+> ### ⚠️ MOST IMPORTANT — set YOUR robot's card number first
+> Before anything else: open **`play.py`** and change the line `CARD_SERIAL = "...."` (near the top) to **your own robot's number** — the one printed on its **connection card**. Every robot has a different number, so if it isn't yours the program **won't connect to your robot** (it may grab someone else's, or none at all). Don't know your number? Run `python solutions/tests/find_serial.py`.
+
 ## What you need
 
 - A laptop with a webcam (Windows or Mac).
@@ -67,39 +70,27 @@ The webcam gives one **gaze number** between `0.0` and `1.0` (same orientation a
 
 **Goal:** teach the program what *your* eyes look like when you look left, center and right.
 
-**What you're given (already done).** When you calibrate, the camera films you looking each way for a few seconds. Every frame gives one **gaze number** (`0.0` = far right … `1.0` = far left). All those numbers are collected into three lists, e.g.:
+When you calibrate, the camera films you looking each way for a few seconds. Every frame gives one **gaze number** (`0.0` = far right … `1.0` = far left), collected into three lists:
 
     samples_by_label["left"]   = [0.71, 0.69, 0.70, 0.72, 0.70, ...]   # while you looked LEFT
     samples_by_label["center"] = [0.50, 0.49, 0.51, 0.50, ...]         # ... CENTER
     samples_by_label["right"]  = [0.31, 0.30, 0.29, 0.30, ...]         # ... RIGHT
 
-**What you write.** Each list has many numbers, but you want **one** number that represents each direction — its **average** (arithmetic mean): add the numbers up and divide by how many there are.
+You're given a helper, **`_mean(values)`**, that returns the **average** (arithmetic mean) of a list. For example:
 
-    average of [0.71, 0.69, 0.70, 0.72, 0.70]  =  3.52 / 5  =  0.704
+    _mean([0.71, 0.69, 0.70, 0.72, 0.70])   # -> 0.704
 
-Write the `_mean` helper yourself so it takes a list and returns that average:
+### Complete these equations
 
-```python
-def _mean(values):
-    # TODO 1: if the list is empty (no samples), return None so we don't divide by zero
-    # TODO 2: otherwise, return the average of the numbers in `values`
-    ...
-```
-
-Two built-in functions are all you need: `sum(values)` adds up the list, and `len(values)` tells you how many numbers it has. The average is one of them divided by the other.
-
-**That trio is your model.** `train()` is already written: it calls your `_mean` once per direction and keeps the three averages. Those three numbers together *are* your personal eye model:
+Inside `train()`, set each direction to the average of its list — call `_mean` on the matching list for each one:
 
 ```python
-def train(samples_by_label, deadzone=DEADZONE):
-    left   = _mean(samples_by_label["left"])     # e.g. 0.70
-    center = _mean(samples_by_label["center"])   # e.g. 0.50
-    right  = _mean(samples_by_label["right"])    # e.g. 0.30
-    ...
-    return EyeModel(left, center, right, deadzone)
+    left   = ____________________   # the average of the LEFT samples
+    center = ____________________   # the average of the CENTER samples
+    right  = ____________________   # the average of the RIGHT samples
 ```
 
-With the lists above, your model is `(left=0.70, center=0.50, right=0.30)`. Step 2 uses those three numbers to decide where a new gaze is pointing.
+Those three averages together *are* your model — e.g. `(left=0.70, center=0.50, right=0.30)`. Step 2 uses them to decide where a new gaze is pointing.
 
 ---
 
@@ -173,7 +164,7 @@ When `decide()` is done, connect the robot and drive for real:
 
     python play.py
 
-> ⚠️ **VERY IMPORTANT — set your own card number first.** At the top of `play.py`, change `CARD_SERIAL = "...."` to **your robot's number** (the one printed on its connection card). Every robot has a different number, so if it isn't yours the program won't connect to *your* robot (it may connect to someone else's, or to none). Not sure of your number? Run `python solutions/tests/find_serial.py`.
+> ⚠️ Reminder: make sure `CARD_SERIAL` at the top of `play.py` is **your own robot's number** (see the note at the top of this README) — otherwise it won't connect to your robot.
 
 ---
 

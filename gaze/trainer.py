@@ -100,10 +100,11 @@ def _mean(xs):
 
 
 def train(samples_by_label, deadzone=DEADZONE):
-    """Learn the model from labeled gaze samples. Raises ValueError if the data
-    is unusable (eyes not seen, or the three looks aren't separable)."""
-    left, center, right = _mean(samples_by_label.get("left", [])), \
-        _mean(samples_by_label.get("center", [])), _mean(samples_by_label.get("right", []))
+    """Learn the model: the average gaze for each direction. Raises ValueError if
+    the data is unusable (eyes not seen, or the three looks aren't separable)."""
+    left   = _mean(samples_by_label["left"])
+    center = _mean(samples_by_label["center"])
+    right  = _mean(samples_by_label["right"])
     if None in (left, center, right):
         raise ValueError("Not enough samples — make sure your eyes were visible the whole time.")
     # gaze ratio is LOW when looking right and HIGH when looking left, so we expect right < center < left
